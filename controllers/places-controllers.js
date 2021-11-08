@@ -6,6 +6,7 @@ const getCoordsForAddress = require('../util/location');
 const Place = require('../models/place');
 const User = require('../models/user');
 const mongoose = require('mongoose');
+const axios = require('axios');
 
 let DUMMY_PLACES = [
   {
@@ -89,20 +90,25 @@ exports.createPlace = async (req, res, next) => {
     next(new HttpError('Invalid inputs passed, please check your data.', 422));
   }
 
-  const { title, location, description, address, creator } = req.body;
+  const { title, description, address, creator } = req.body;
 
-  // let coordinates;
-  // try {
-  //   coordinates = await getCoordsForAddress(address);
-  // } catch (error) {
-  //   return next(error);
-  // }
+  const url = `http://api.positionstack.com/v1/forward?access_key=${process.env.API_KEY}&query=${address}`;
+
+  const responseLocation = await axios.get(url);
+
+  if (responseLocation.data.data.length === 0) {
+    const error = new HttpError('Could not find that place.', 404);
+    return next(error);
+  }
 
   const createPlace = new Place({
     title,
     description,
     address,
-    location,
+    location: {
+      lat: responseLocation.data.data[0].latitude,
+      lng: responseLocation.data.data[0].longitude,
+    },
     image: 'https://www.darslah.com/wp-content/uploads/minis-briks.jpg',
     creator,
   });
@@ -122,12 +128,17 @@ exports.createPlace = async (req, res, next) => {
   }
 
   try {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    await createPlace.save({ session: session });
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await createPlace.save({ session: sess });
     user.places.push(createPlace);
+    await user.save({ session: sess });
+    await sess.commitTransaction();
   } catch (err) {
-    const error = new HttpError(err.message, 500);
+    const error = new HttpError(
+      'Creating place failed, please try again.',
+      500,
+    );
     return next(error);
   }
 
