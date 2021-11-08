@@ -115,7 +115,7 @@ exports.createPlace = async (req, res, next) => {
   res.status(201).json({ createPlace });
 };
 
-exports.updatePlace = (req, res, next) => {
+exports.updatePlace = async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -125,14 +125,25 @@ exports.updatePlace = (req, res, next) => {
   const { title, description } = req.body;
   const placeId = req.params.pid;
 
-  const updatePlace = { ...DUMMY_PLACES.find((p) => p.id === placeId) };
-  const placeIndex = DUMMY_PLACES.findIndex((p) => p.id === placeId);
-  updatePlace.title = title;
-  updatePlace.description = description;
+  let place;
+  try {
+    place = await Place.findByIdAndUpdate(
+      placeId,
+      {
+        title: title,
+        description: description,
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+  } catch (err) {
+    const error = new HttpError(err.message, 500);
+    return next(error);
+  }
 
-  DUMMY_PLACES[placeIndex] = updatePlace;
-
-  res.status(200).json({ updatePlace });
+  res.status(200).json({ place: place.toObject({ getters: true }) });
 };
 
 exports.deletePlace = (req, res, next) => {
