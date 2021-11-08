@@ -1,6 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const HttpError = require('./models/http-error');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+
+
+dotenv.config();
 
 const placesRoutes = require('./routes/places-routes');
 const usersRoutes = require('./routes/users-routes');
@@ -25,4 +30,11 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(5000);
+mongoose
+  .connect(process.env.MONGODB_ACCESS)
+  .then(() => {
+    app.listen(5000);
+  })
+  .catch((err) => {
+    console.log(err);
+  });
