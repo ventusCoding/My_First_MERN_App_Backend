@@ -27,8 +27,19 @@ const DUMMY_USERS = [
   },
 ];
 
-exports.getUsers = (req, res, next) => {
-  res.status(200).json(DUMMY_USERS);
+exports.getUsers = async (req, res, next) => {
+
+  let users;
+  try {
+    users = await User.find({}, '-password');
+  } catch (err) {
+    const error = new HttpError(err.message, 500);
+    return next(error);
+  }
+
+  res
+    .status(200)
+    .json({ users: users.map((user) => user.toObject({ getters: true })) });
 };
 
 exports.signup = async (req, res, next) => {
@@ -77,15 +88,21 @@ exports.signup = async (req, res, next) => {
   res.status(201).json({ user: createdUser.toObject({ getters: true }) });
 };
 
-exports.login = (req, res, next) => {
+exports.login = async (req, res, next) => {
   const { email, password } = req.body;
 
-  const identifiedUser = DUMMY_USERS.find((u) => u.email === email);
+  let existingUser;
+  try {
+    existingUser = await User.findOne({ email });
+  } catch (err) {
+    const error = new HttpError(err.message, 500);
+    return next(error);
+  }
 
-  if (!identifiedUser || identifiedUser.password !== password) {
+  if (!existingUser || existingUser.password !== password) {
     const error = new HttpError(
-      'Could not identify user, creadentials seem to be wrong.',
-      401,
+      'Invalid credentials, Could not log you in.',
+      500,
     );
     return next(error);
   }
