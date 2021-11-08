@@ -28,7 +28,6 @@ const DUMMY_USERS = [
 ];
 
 exports.getUsers = async (req, res, next) => {
-
   let users;
   try {
     users = await User.find({}, '-password');
@@ -52,7 +51,7 @@ exports.signup = async (req, res, next) => {
     );
     return next(error);
   }
-  const { name, email, password, places } = req.body;
+  const { name, email, password } = req.body;
 
   let existingUser;
   try {
@@ -75,7 +74,7 @@ exports.signup = async (req, res, next) => {
     email,
     image: 'https://randomuser.me/api/portraits/men/1.jpg',
     password, //TODO: crypt the password
-    places,
+    places: [],
   });
 
   try {
