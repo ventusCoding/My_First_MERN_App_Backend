@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 
 const HttpError = require('../models/http-error');
 const getCoordsForAddress = require('../util/location');
+const Place = require('../models/place');
 
 let DUMMY_PLACES = [
   {
@@ -67,25 +68,30 @@ exports.createPlace = async (req, res, next) => {
     next(new HttpError('Invalid inputs passed, please check your data.', 422));
   }
 
-  const { title, description, address, creator } = req.body;
+  const { title, location, description, address, creator } = req.body;
 
-  let coordinates;
-  try {
-    coordinates = await getCoordsForAddress(address);
-  } catch (error) {
-    return next(error);
-  }
+  // let coordinates;
+  // try {
+  //   coordinates = await getCoordsForAddress(address);
+  // } catch (error) {
+  //   return next(error);
+  // }
 
-  const createPlace = {
-    id: uuid(),
+  const createPlace = new Place({
     title,
     description,
-    location: coordinates,
     address,
+    location,
+    image: 'https://www.darslah.com/wp-content/uploads/minis-briks.jpg',
     creator,
-  };
+  });
 
-  DUMMY_PLACES.push(createPlace);
+  try {
+    await createPlace.save();
+  } catch (err) {
+    const error = new HttpError(err.message, 500);
+    return next(error);
+  }
 
   res.status(201).json({ createPlace });
 };
